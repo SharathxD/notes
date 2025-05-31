@@ -13,24 +13,19 @@ export interface LocalNote {
   updatedAt: string
   deviceInfo?: string
   cloudId?: string
-  lastSynced?: string
   isLocal?: boolean
 }
 
 const DEVICE_ID_KEY = "notepad-device-id"
-const ANONYMOUS_USER_ID_KEY = "notepad-anonymous-user-id"
 const NOTES_STORAGE_KEY = "notepad-notes"
 
 export function useNotes() {
   const [notes, setNotes] = useState<LocalNote[]>([])
   const [deviceId, setDeviceId] = useState("")
-  const [anonymousUserId, setAnonymousUserId] = useState("")
   const [cloudEnabled, setCloudEnabled] = useState(false)
-  const [isSyncing, setIsSyncing] = useState(false)
-  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null)
   const { toast } = useToast()
 
-  // Initialize device and user IDs
+  // Initialize device ID
   useEffect(() => {
     let storedDeviceId = localStorage.getItem(DEVICE_ID_KEY)
     if (!storedDeviceId) {
@@ -38,13 +33,6 @@ export function useNotes() {
       localStorage.setItem(DEVICE_ID_KEY, storedDeviceId)
     }
     setDeviceId(storedDeviceId)
-
-    let storedAnonymousUserId = localStorage.getItem(ANONYMOUS_USER_ID_KEY)
-    if (!storedAnonymousUserId) {
-      storedAnonymousUserId = `anon-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-      localStorage.setItem(ANONYMOUS_USER_ID_KEY, storedAnonymousUserId)
-    }
-    setAnonymousUserId(storedAnonymousUserId)
 
     loadLocalNotes()
   }, [])
@@ -70,7 +58,6 @@ export function useNotes() {
       updatedAt: supabaseNote.updated_at,
       deviceInfo: supabaseNote.device_info || undefined,
       cloudId: supabaseNote.id,
-      lastSynced: supabaseNote.updated_at,
       isLocal: false,
     }),
     [],
@@ -90,58 +77,36 @@ export function useNotes() {
     [deviceId],
   )
 
-  const enableCloudSync = useCallback(async () => {
-    setCloudEnabled(true)
-    await registerDevice()
-    await loadNotesFromSupabase()
-
-    toast({
-      title: "Cloud sync enabled",
-      description: "Your notes will now sync across all devices.",
-    })
-  }, [anonymousUserId, deviceId])
-
-  const disableCloudSync = useCallback(() => {
-    setCloudEnabled(false)
-    toast({
-      title: "Cloud sync disabled",
-      description: "Notes will only be stored locally.",
-    })
-  }, [])
-
-  const registerDevice = useCallback(async () => {
-    if (!cloudEnabled) return
-
-    try {
-      const { error } = await supabase.from("devices").upsert({
-        device_id: deviceId,
-        device_name: navigator.userAgent.includes("Mobile") ? "Mobile Device" : "Desktop",
-        device_type: getDeviceInfo(),
-        last_seen: new Date().toISOString(),
-        created_at: new Date().toISOString()
-      })
-
-      if (error) throw error
-    } catch (error) {
-      console.error("Error registering device:", error)
+  const loadNotesFromSupabase = useCallback(async (forceEnabled = false) => {
+    const shouldLoad = forceEnabled || cloudEnabled
+    console.log('Checking cloud sync state:', { cloudEnabled, forceEnabled, shouldLoad })
+    
+    if (!shouldLoad) {
+      console.log('Cloud sync is disabled, skipping load from Supabase')
+      return
     }
-  }, [cloudEnabled, deviceId])
 
-  const loadNotesFromSupabase = useCallback(async () => {
-    if (!cloudEnabled || !anonymousUserId) return
-
-    setIsSyncing(true)
     try {
+      console.log('Loading notes from Supabase...')
       const { data, error } = await supabase
         .from("notes")
         .select("*")
-        .eq("anonymous_user_id", anonymousUserId)
         .eq("is_deleted", false)
         .order("updated_at", { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase query error:', error)
+        throw error
+      }
+
+      console.log('Retrieved notes from Supabase!')
+      if (!data || data.length === 0) {
+        console.log('No notes found in Supabase')
+        return
+      }
 
       const cloudNotes = data.map(convertSupabaseNoteToLocal)
+      console.log('Converted cloud notes!')
 
       // Merge with local notes, prioritizing cloud versions
       const mergedNotes = [...cloudNotes]
@@ -152,40 +117,63 @@ export function useNotes() {
         }
       })
 
+      console.log('Final merged notes!')
       setNotes(mergedNotes)
       saveNotesToLocal(mergedNotes)
-      setLastSyncTime(new Date().toISOString())
 
       toast({
         title: "Notes loaded",
         description: `Loaded ${cloudNotes.length} notes from cloud.`,
       })
     } catch (error: any) {
+      console.error('Error loading notes:', error)
       toast({
         title: "Failed to load notes",
         description: error.message,
         variant: "destructive",
       })
-    } finally {
-      setIsSyncing(false)
     }
-  }, [cloudEnabled, anonymousUserId, notes, convertSupabaseNoteToLocal, saveNotesToLocal, toast])
+  }, [cloudEnabled, notes, convertSupabaseNoteToLocal, saveNotesToLocal, toast])
+
+  const enableCloudSync = useCallback(async () => {
+    console.log('Enabling cloud sync...')
+    setCloudEnabled(true)
+    await loadNotesFromSupabase(true)
+
+    toast({
+      title: "Cloud enabled",
+      description: "Your notes will now be stored in the cloud.",
+    })
+  }, [loadNotesFromSupabase])
+
+  const disableCloudSync = useCallback(() => {
+    setCloudEnabled(false)
+    toast({
+      title: "Cloud disabled",
+      description: "Notes will only be stored locally.",
+    })
+  }, [])
 
   const saveNoteToSupabase = useCallback(
     async (note: LocalNote) => {
-      if (!cloudEnabled || !anonymousUserId) return
+      if (!cloudEnabled) return
 
       try {
+        console.log('Saving note to Supabase:', note)
         const supabaseNote = convertLocalNoteToSupabase(note)
-        const { error } = await supabase.from("notes").upsert(supabaseNote)
+        const { data, error } = await supabase.from("notes").upsert(supabaseNote)
 
-        if (error) throw error
+        if (error) {
+          console.error('Supabase save error:', error)
+          throw error
+        }
 
-        // Update local note with sync info
+        console.log('Note saved to Supabase:', data)
+
+        // Update local note with cloud info
         const updatedNote = {
           ...note,
           cloudId: supabaseNote.id,
-          lastSynced: new Date().toISOString(),
           isLocal: false,
         }
 
@@ -197,6 +185,7 @@ export function useNotes() {
 
         return updatedNote
       } catch (error: any) {
+        console.error('Error saving note:', error)
         toast({
           title: "Failed to save note",
           description: error.message,
@@ -205,7 +194,7 @@ export function useNotes() {
         return note
       }
     },
-    [cloudEnabled, anonymousUserId, convertLocalNoteToSupabase, saveNotesToLocal, toast],
+    [cloudEnabled, convertLocalNoteToSupabase, saveNotesToLocal, toast],
   )
 
   const createNote = useCallback(
@@ -279,7 +268,6 @@ export function useNotes() {
             .from("notes")
             .update({ is_deleted: true })
             .eq("id", noteToDelete.cloudId)
-            .eq("anonymous_user_id", anonymousUserId)
 
           if (error) throw error
         } catch (error: any) {
@@ -291,64 +279,18 @@ export function useNotes() {
         }
       }
     },
-    [notes, cloudEnabled, anonymousUserId, saveNotesToLocal, toast],
+    [notes, cloudEnabled, saveNotesToLocal, toast],
   )
-
-  const syncWithSupabase = useCallback(async () => {
-    if (!cloudEnabled || !anonymousUserId) return
-
-    setIsSyncing(true)
-    try {
-      // Sync local notes to cloud
-      for (const note of notes.filter((n) => n.isLocal)) {
-        await saveNoteToSupabase(note)
-      }
-
-      // Update sync status
-      await supabase.from("sync_status").upsert({
-        anonymous_user_id: anonymousUserId,
-        device_id: deviceId,
-        last_sync: new Date().toISOString(),
-        sync_count: 1,
-      })
-
-      // Update device last seen
-      await supabase
-        .from("devices")
-        .update({ last_seen: new Date().toISOString() })
-        .eq("device_id", deviceId)
-        .eq("anonymous_user_id", anonymousUserId)
-
-      setLastSyncTime(new Date().toISOString())
-
-      toast({
-        title: "Sync complete",
-        description: "Your notes are up to date across all devices.",
-      })
-    } catch (error: any) {
-      toast({
-        title: "Sync failed",
-        description: error.message,
-        variant: "destructive",
-      })
-    } finally {
-      setIsSyncing(false)
-    }
-  }, [cloudEnabled, anonymousUserId, deviceId, notes, saveNoteToSupabase, toast])
 
   return {
     notes,
     deviceId,
-    anonymousUserId,
     cloudEnabled,
-    isSyncing,
-    lastSyncTime,
     enableCloudSync,
     disableCloudSync,
     createNote,
     updateNote,
     deleteNote,
-    syncWithSupabase,
     loadNotesFromSupabase,
   }
 }

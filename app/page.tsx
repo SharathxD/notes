@@ -7,31 +7,23 @@ import { Sidebar } from "@/components/sidebar"
 import { NoteEditor } from "@/components/note-editor"
 import { EmptyState } from "@/components/empty-state"
 import { useNotes, type LocalNote } from "@/hooks/use-notes"
-import { useRealtime } from "@/hooks/use-realtime"
 import { useToast } from "@/hooks/use-toast"
 import { exportToFile } from "@/lib/utils"
 
 export default function NotepadApp() {
   const [currentNote, setCurrentNote] = useState<LocalNote | null>(null)
   const [isOnline, setIsOnline] = useState(true)
-  const [syncUrl, setSyncUrl] = useState("")
-  const [autoSync, setAutoSync] = useState(true)
-  const [realTimeEnabled, setRealTimeEnabled] = useState(true)
   const { toast } = useToast()
 
   const {
     notes,
     deviceId,
-    anonymousUserId,
     cloudEnabled,
-    isSyncing,
-    lastSyncTime,
     enableCloudSync,
     disableCloudSync,
     createNote,
     updateNote,
     deleteNote,
-    syncWithSupabase,
     loadNotesFromSupabase,
   } = useNotes()
 
@@ -39,8 +31,8 @@ export default function NotepadApp() {
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true)
-      if (autoSync && cloudEnabled) {
-        syncWithSupabase()
+      if (cloudEnabled) {
+        loadNotesFromSupabase()
       }
     }
     const handleOffline = () => setIsOnline(false)
@@ -52,7 +44,7 @@ export default function NotepadApp() {
       window.removeEventListener("online", handleOnline)
       window.removeEventListener("offline", handleOffline)
     }
-  }, [autoSync, cloudEnabled, syncWithSupabase])
+  }, [cloudEnabled, loadNotesFromSupabase])
 
   // Set current note when notes change
   useEffect(() => {
@@ -62,47 +54,6 @@ export default function NotepadApp() {
       setCurrentNote(notes.length > 1 ? notes.find((n) => n.id !== currentNote.id) || null : null)
     }
   }, [notes, currentNote])
-
-  // Handle real-time updates
-  const handleRealtimeUpdate = (payload: any) => {
-    const { eventType, new: newRecord, old: oldRecord } = payload
-
-    switch (eventType) {
-      case "INSERT":
-        loadNotesFromSupabase()
-        break
-      case "UPDATE":
-        loadNotesFromSupabase()
-        break
-      case "DELETE":
-        loadNotesFromSupabase()
-        break
-    }
-  }
-
-  useRealtime({
-    anonymousUserId,
-    deviceId,
-    enabled: realTimeEnabled && cloudEnabled,
-    onNoteChange: handleRealtimeUpdate,
-  })
-
-  // Check for sync URL on load
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const syncParam = urlParams.get("sync")
-
-    if (syncParam && syncParam !== anonymousUserId) {
-      // This would require updating the anonymous user ID and reloading
-      toast({
-        title: "Sync URL detected",
-        description: "Enable cloud sync and refresh to load shared notes.",
-      })
-
-      // Clean URL
-      window.history.replaceState({}, document.title, window.location.pathname)
-    }
-  }, [anonymousUserId, toast])
 
   const handleNoteCreate = async () => {
     const newNote = await createNote()
@@ -132,7 +83,6 @@ export default function NotepadApp() {
       notes,
       exportedAt: new Date().toISOString(),
       deviceId,
-      anonymousUserId,
       version: "2.0",
     }
 
@@ -189,24 +139,6 @@ export default function NotepadApp() {
     reader.readAsText(file)
   }
 
-  const handleGenerateSyncUrl = () => {
-    const url = `${window.location.origin}${window.location.pathname}?sync=${anonymousUserId}`
-    setSyncUrl(url)
-
-    toast({
-      title: "Sync URL Generated",
-      description: "Share this URL to access your notes on another device.",
-    })
-  }
-
-  const handleCopySyncUrl = () => {
-    navigator.clipboard.writeText(syncUrl)
-    toast({
-      title: "URL Copied",
-      description: "Sync URL has been copied to clipboard.",
-    })
-  }
-
   return (
     <div className="flex h-screen bg-background">
       <Sidebar
@@ -217,17 +149,10 @@ export default function NotepadApp() {
         onNoteDelete={handleNoteDelete}
         cloudEnabled={cloudEnabled}
         isOnline={isOnline}
-        isSyncing={isSyncing}
-        anonymousUserId={anonymousUserId}
-        lastSyncTime={lastSyncTime}
         onEnableCloudSync={enableCloudSync}
         onDisableCloudSync={disableCloudSync}
-        onSyncNow={syncWithSupabase}
         onExportAll={handleExportAll}
         onImport={handleImport}
-        onGenerateSyncUrl={handleGenerateSyncUrl}
-        syncUrl={syncUrl}
-        onCopySyncUrl={handleCopySyncUrl}
       />
 
       {currentNote ? (

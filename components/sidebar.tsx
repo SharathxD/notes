@@ -6,7 +6,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { FileText, Plus, Settings, Search, Wifi, WifiOff, Loader2 } from "lucide-react"
+import { FileText, Plus, Settings, Search, Wifi, WifiOff } from "lucide-react"
 import { NoteList } from "@/components/note-list"
 import { SettingsDialog } from "@/components/settings-dialog"
 import { countWords } from "@/lib/utils"
@@ -21,17 +21,10 @@ interface SidebarProps {
   onNoteDelete: (noteId: string) => void
   cloudEnabled: boolean
   isOnline: boolean
-  isSyncing: boolean
-  anonymousUserId: string
-  lastSyncTime: string | null
   onEnableCloudSync: () => void
   onDisableCloudSync: () => void
-  onSyncNow: () => void
   onExportAll: () => void
   onImport: (event: React.ChangeEvent<HTMLInputElement>) => void
-  onGenerateSyncUrl: () => void
-  syncUrl: string
-  onCopySyncUrl: () => void
 }
 
 export function Sidebar({
@@ -42,17 +35,10 @@ export function Sidebar({
   onNoteDelete,
   cloudEnabled,
   isOnline,
-  isSyncing,
-  anonymousUserId,
-  lastSyncTime,
   onEnableCloudSync,
   onDisableCloudSync,
-  onSyncNow,
   onExportAll,
   onImport,
-  onGenerateSyncUrl,
-  syncUrl,
-  onCopySyncUrl,
 }: SidebarProps) {
   const [searchTerm, setSearchTerm] = useState("")
 
@@ -66,7 +52,7 @@ export function Sidebar({
     totalNotes: notes.length,
     totalWords: notes.reduce((acc, note) => acc + countWords(note.content), 0),
     totalCharacters: notes.reduce((acc, note) => acc + note.content.length, 0),
-    syncedNotes: notes.filter((note) => note.lastSynced && !note.isLocal).length,
+    cloudNotes: notes.filter((note) => !note.isLocal).length,
   }
 
   return (
@@ -76,9 +62,7 @@ export function Sidebar({
           <FileText className="h-6 w-6" />
           <h1 className="text-xl font-semibold">Notepad</h1>
           <div className="ml-auto flex items-center gap-1">
-            {isSyncing ? (
-              <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-            ) : isOnline ? (
+            {isOnline ? (
               <Wifi className="h-4 w-4 text-green-500" />
             ) : (
               <WifiOff className="h-4 w-4 text-red-500" />
@@ -106,17 +90,10 @@ export function Sidebar({
           <SettingsDialog
             cloudEnabled={cloudEnabled}
             isOnline={isOnline}
-            isSyncing={isSyncing}
-            anonymousUserId={anonymousUserId}
-            lastSyncTime={lastSyncTime}
             onEnableCloudSync={onEnableCloudSync}
             onDisableCloudSync={onDisableCloudSync}
-            onSyncNow={onSyncNow}
             onExportAll={onExportAll}
             onImport={onImport}
-            onGenerateSyncUrl={onGenerateSyncUrl}
-            syncUrl={syncUrl}
-            onCopySyncUrl={onCopySyncUrl}
           >
             <Button variant="outline" size="sm">
               <Settings className="h-4 w-4" />
@@ -141,8 +118,8 @@ export function Sidebar({
             <div>Notes</div>
           </div>
           <div>
-            <div className="font-medium">{cloudEnabled ? stats.syncedNotes : 0}</div>
-            <div>Synced</div>
+            <div className="font-medium">{cloudEnabled ? stats.cloudNotes : 0}</div>
+            <div>Cloud</div>
           </div>
           <div>
             <div className="font-medium">{stats.totalWords}</div>

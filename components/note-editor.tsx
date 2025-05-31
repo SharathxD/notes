@@ -87,10 +87,10 @@ export function NoteEditor({ note, onNoteUpdate, onNoteDelete, cloudEnabled }: N
                   {note.deviceInfo}
                 </Badge>
               )}
-              {cloudEnabled && note.lastSynced && !note.isLocal ? (
+              {cloudEnabled && !note.isLocal ? (
                 <Badge variant="outline" className="text-xs text-green-600">
                   <Cloud className="h-3 w-3 mr-1" />
-                  Synced
+                  Cloud
                 </Badge>
               ) : note.isLocal ? (
                 <Badge variant="outline" className="text-xs text-orange-600">
