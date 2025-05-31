@@ -1,77 +1,91 @@
-# Notepad App
+# 📝 Notepad App
 
-A powerful, modern notepad application built with Next.js and Supabase that works offline and optionally syncs across all your devices.
+> A powerful, modern notepad application built with Next.js and Supabase that works offline and optionally syncs across all your devices.
 
-## Features
+## ✨ Features
 
-### 🚀 Core Features
-- **No Sign-up Required** - Start using immediately without any registration
-- **Offline First** - Works completely offline with local storage
-- **Optional Cloud Sync** - Enable cloud synchronization when you need cross-device access
-- **Real-time Updates** - See changes instantly across all connected devices
-- **Auto-save** - Never lose your work with automatic saving
+<details>
+<summary><strong>🚀 Core Features</strong></summary>
 
-### 📱 Cross-Device Support
-- **Universal Access** - Works on desktop, tablet, and mobile devices
-- **Device Tracking** - See which device created or modified each note
-- **Sync URLs** - Share links to access your notes on other devices
-- **Offline Support** - Continue working offline, sync when reconnected
+- Start using immediately without registration
+- Works completely offline with local storage
+- Optional cloud synchronization
+- Real-time updates across devices
+- Automatic saving
+</details>
 
-### 💾 Data Management
-- **Local Storage** - Primary storage in browser's localStorage
-- **Cloud Backup** - Optional Supabase cloud storage
-- **Export/Import** - Backup and restore your notes
-- **File Support** - Import text files and markdown documents
+<details>
+<summary><strong>📱 Cross-Device Support</strong></summary>
 
-### 🎨 User Experience
-- **Clean Interface** - Modern, intuitive design
-- **Search & Filter** - Find notes quickly with full-text search
-- **Statistics** - Track note count, word count, and sync status
-- **Visual Indicators** - Clear sync status and device information
+- Universal access (desktop, tablet, mobile)
+- Device tracking and management
+- Sync URLs for shared access
+- Seamless offline support
+</details>
 
-## Getting Started
+<details>
+<summary><strong>💾 Data Management</strong></summary>
+
+- Primary storage in browser's localStorage
+- Optional Supabase cloud backup
+- Export/Import functionality
+- Text and markdown file support
+</details>
+
+<details>
+<summary><strong>🎨 User Experience</strong></summary>
+
+- Modern, intuitive design
+- Full-text search capabilities
+- Usage statistics tracking
+- Clear sync status indicators
+</details>
+
+## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 18+ 
+
+- Node.js 18+
 - npm or yarn
-- Supabase account (for cloud sync features)
+- Supabase account (for cloud sync)
 
-### Installation
+### Quick Start
 
-1. Clone the repository:
-\`\`\`bash
+1. **Clone the repository**
+```bash
 git clone <repository-url>
 cd notepad-app
-\`\`\`
+```
 
-2. Install dependencies:
-\`\`\`bash
+2. **Install dependencies**
+```bash
 npm install
-\`\`\`
+```
 
-3. Set up environment variables:
-\`\`\`bash
+3. **Configure environment**
+```bash
 cp .env.example .env.local
-\`\`\`
+```
 
-Add your Supabase credentials:
-\`\`\`env
+Add your Supabase credentials to `.env.local`:
+```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-\`\`\`
+```
 
-4. Run the development server:
-\`\`\`bash
+4. **Start development server**
+```bash
 npm run dev
-\`\`\`
+```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+5. Open [http://localhost:3000](http://localhost:3000)
 
-### Database Setup
+## 📊 Database Schema
 
-The app requires the following Supabase tables:
+<details>
+<summary><strong>Required Supabase Tables</strong></summary>
 
-\`\`\`sql
+```sql
 -- Notes table
 CREATE TABLE notes (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -108,86 +122,71 @@ CREATE TABLE sync_status (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   anonymous_user_id TEXT
 );
-\`\`\`
+```
+</details>
 
-## Usage
+## 📖 Usage Guide
 
-### Basic Usage
-1. **Create Notes** - Click "New Note" to create a new note
-2. **Edit Content** - Click on any note to start editing
-3. **Auto-save** - Changes are automatically saved after 2 seconds
-4. **Search** - Use the search bar to find specific notes
+### Basic Operations
+- Create notes with "New Note" button
+- Edit by clicking any note
+- Automatic saving after 2 seconds
+- Search functionality via search bar
 
-### Cloud Sync
-1. **Enable Sync** - Click the settings button and enable cloud sync
-2. **Cross-device Access** - Your notes will automatically sync across devices
-3. **Share Access** - Generate sync URLs to access notes on other devices
-4. **Real-time Updates** - See changes from other devices instantly
+### Cloud Features
+- Enable sync in settings
+- Automatic cross-device synchronization
+- Share notes via sync URLs
+- Real-time collaborative updates
 
-### Import/Export
-1. **Export All** - Download a complete backup of your notes
-2. **Import Files** - Import text files, markdown, or backup files
-3. **Individual Export** - Export single notes as text files
+### Data Management
+- Export complete note backups
+- Import text/markdown files
+- Individual note exports
 
-## Technology Stack
+## 🛠 Technical Stack
 
 - **Frontend**: Next.js 14, React 18, TypeScript
-- **Styling**: Tailwind CSS, Radix UI components
-- **Database**: Supabase (PostgreSQL)
-- **Storage**: Browser localStorage + Supabase cloud storage
-- **Real-time**: Supabase real-time subscriptions
+- **Styling**: Tailwind CSS, Radix UI
+- **Backend**: Supabase (PostgreSQL)
+- **Storage**: localStorage + Supabase
+- **Real-time**: Supabase subscriptions
 
-## Project Structure
+## 📁 Project Structure
 
-\`\`\`
+```
 notepad-app/
 ├── app/                    # Next.js app directory
-│   ├── globals.css        # Global styles
-│   ├── layout.tsx         # Root layout
-│   └── page.tsx           # Main application
 ├── components/            # React components
-│   ├── ui/               # Reusable UI components
-│   ├── empty-state.tsx   # Empty state component
-│   ├── note-editor.tsx   # Note editing interface
-│   ├── note-list.tsx     # Notes list component
-│   ├── settings-dialog.tsx # Settings modal
-│   └── sidebar.tsx       # Application sidebar
 ├── hooks/                # Custom React hooks
-│   ├── use-notes.ts      # Notes management hook
-│   ├── use-realtime.ts   # Real-time updates hook
-│   └── use-toast.ts      # Toast notifications hook
 ├── lib/                  # Utility libraries
-│   ├── supabase.ts       # Supabase client
-│   └── utils.ts          # Helper functions
 └── public/               # Static assets
-\`\`\`
+```
 
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Make your changes and commit: `git commit -m 'Add feature'`
-4. Push to the branch: `git push origin feature-name`
+2. Create branch: `git checkout -b feature-name`
+3. Commit changes: `git commit -m 'Add feature'`
+4. Push branch: `git push origin feature-name`
 5. Submit a pull request
 
-## License
+## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - See [LICENSE](LICENSE)
 
-## Support
+## 💬 Support
 
-If you encounter any issues or have questions:
+- Check [Issues](https://github.com/your-repo/issues)
+- Create new issues with details
+- Email: support@notepad-app.com
 
-1. Check the [Issues](https://github.com/your-repo/issues) page
-2. Create a new issue with detailed information
-3. Contact support at support@notepad-app.com
+## 🗺 Roadmap
 
-## Roadmap
-
-- [ ] Rich text editor with markdown support
-- [ ] Note categories and tags
+- [ ] Rich text editor with markdown
+- [ ] Categories and tags
 - [ ] Collaborative editing
 - [ ] Note templates
-- [ ] Advanced search and filtering
+- [ ] Advanced search
 - [ ] Client-side encryption
-- [ ] PWA support for offline installation
+- [ ] PWA support
